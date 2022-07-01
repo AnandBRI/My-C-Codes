@@ -2,10 +2,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Photon;
+using Photon.Pun;
 using UnityEngine.UI;
-using PlayFab;
+using Photon.Realtime;
+using UnityEngine.SceneManagement;
 
-public class MPManager : Photon.MonoBehaviour
+
+public class MPManager : MonoBehaviourPunCallbacks, IPunObservable
 {
     public PlayFabAuth auth;
 
@@ -18,14 +21,17 @@ public class MPManager : Photon.MonoBehaviour
     public GameObject[] EnableOnJoinRoom;
     public GameObject[] EnableOnConnected;
     public GameObject[] DisableOnPlayerCountMax;
+    public GameObject WinnerPannel;
+    public Text WinText;
+    public bool aPlayerHasWon = false;
 
     public string username;
     public int curPlayers = 0;
     public bool gameStart = false;
     public Text timerText;
-    private List<GameObject> spawnPoints = new List<GameObject>();
+    public List<GameObject> spawnPoints = new List<GameObject>();
     private float timer = 3;
-
+    public string MapName = "SampleScene";
 
     void Start()
     {
@@ -34,10 +40,15 @@ public class MPManager : Photon.MonoBehaviour
             spawnPoints.Add(child.gameObject);
         }
     }
+    public void ChangeMap()
+    {
+        SceneManager.LoadScene(MapName);             
+    }
+
     void Update()
     {
     //    curPlayers = PhotonNetwork.playerList.Length + 1;
-        Debug.Log(curPlayers);
+      Debug.Log(curPlayers);
         if (!gameStart)
         {
             if (curPlayers == 2)
@@ -53,23 +64,44 @@ public class MPManager : Photon.MonoBehaviour
                 {
                     gameStart = true;
                     timerText.gameObject.SetActive(false);
-                }
+                }         
             }
         }
     }
+    public void Disconnect()
+    {
+        PhotonNetwork.LeaveRoom();
+        PhotonNetwork.Disconnect();
+        SceneManager.LoadScene(0);
+    }
+    public void SetWinner(string s)
+    {
+        photonView.RPC("HasWon", RpcTarget.All, s);
+    }
+    [PunRPC]
+    void HasWon(string s)
+    {
+        WinnerPannel.SetActive(true);
+        WinText.text = s + " Has Won The Game";
+        aPlayerHasWon = true;
+    }
     private void FixedUpdate()
     {
-        connectState.text = PhotonNetwork.connectionStateDetailed.ToString();
+        connectState.text ="Connection: " + PhotonNetwork.NetworkClientState;
+      //  PhotonNetwork.connec     
     }
 
     public void ConnectToMaster()
     {
-      ///  PhotonNetwork.connectionstateDetailed
-        PhotonNetwork.ConnectUsingSettings(GameVersion);
+      //  PhotonNetwork.connectionstateDetailed
+        PhotonNetwork.ConnectUsingSettings();
     }
 
-    public virtual void OnConnectedToMaster()
+    public override void OnConnectedToMaster()
     {
+        Debug.Log("Connected To Master");
+        PhotonNetwork.AutomaticallySyncScene = true;
+
         foreach (GameObject disable in DisableOnConnected)
         {
             disable.SetActive(false);
@@ -85,30 +117,33 @@ public class MPManager : Photon.MonoBehaviour
         PhotonNetwork.JoinRandomRoom();
     }
 
-    public virtual void OnPhotonRandomJoinFailed()
+    public override void OnJoinRandomFailed(short returnCode, string message)
     {
         RoomOptions rm = new RoomOptions
-            {
-            MaxPlayers =  2,
+        {
+            MaxPlayers = 2,
             IsVisible = true
-            };
+        };
         int rndID = Random.Range(0, 3000);
         PhotonNetwork.CreateRoom("Default: " + rndID, rm, TypedLobby.Default);
     }
     public virtual void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
     {
-        if (stream.isWriting)
+        if (stream.IsWriting)
         {
             stream.SendNext(curPlayers);
+            stream.SendNext(aPlayerHasWon);
         }
-        else if (stream.isReading)
+        else if (stream.IsReading)
         {
             curPlayers = (int)stream.ReceiveNext();
+            aPlayerHasWon = (bool)stream.ReceiveNext();
         }
     }
-    public virtual void OnJoinedRoom()
+    public override void OnJoinedRoom()
     {
-        photonView.RPC("AddPlayerCount", PhotonTargets.All);
+        
+        photonView.RPC("AddPlayerCount", RpcTarget.All);
               foreach (GameObject disable in DisableOnJoinRoom)
         {
             disable.SetActive(false);
