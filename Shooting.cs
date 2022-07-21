@@ -14,4 +14,9 @@ public class Shooting : MonoBehaviour
             p.velocity = transform.forward * speed;
         }
     }
+    public void OnButtonClicked()
+    {
+        Rigidbody p = Instantiate(projectile, transform.position, transform.rotation);
+            p.velocity = transform.forward * speed;
+    }
 }
