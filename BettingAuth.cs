@@ -9,10 +9,10 @@ using SimpleJSON;
 public class BettingAuth : MonoBehaviour
 {
   
-    public string baseUrl = "https://cutie.co.in/socialmedia/mob_app/game_api/";
+    public string baseUrl = " URl HERE ";
 
-    public string register = "https://cutie.co.in/socialmedia/mob_app/game_api/register.php";
-    public string login = "https://cutie.co.in/socialmedia/mob_app/game_api/login.php";
+    public string register = " URL HERE ";
+    public string login = "URL HERE";
 
    // public MPmanager mp;
 
